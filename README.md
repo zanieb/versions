@@ -1,4 +1,4 @@
-# Astral Versions Repository
+# Astral versions
 
 Tracks release metadata for Astral products.
 
