@@ -34,7 +34,7 @@ Each line in the NDJSON files represents one release, e.g.:
 The publish script consumes a plan from `cargo-dist`:
 
 ```bash
-cargo dist plan --output-format=json | uv run scripts/publish-versions.py <target>
+cargo dist plan --output-format=json | uv run scripts/publish-version.py
 ```
 
 ### Backfilling historical versions
@@ -42,5 +42,5 @@ cargo dist plan --output-format=json | uv run scripts/publish-versions.py <targe
 There's a backfill utility which pulls releases and artifacts from GitHub:
 
 ```bash
-uv run scripts/backfill-versions.py <name> <target>
+uv run scripts/backfill-versions.py <name>
 ```

@@ -3,8 +3,20 @@
 # requires-python = ">=3.12"
 # dependencies = []
 # ///
-"""Update versions NDJSON file from cargo-dist manifest."""
+"""Update versions NDJSON file from cargo-dist manifest.
 
+Usage:
+    # Run cargo dist and update versions (default: writes to ../v1/)
+    publish-versions.py
+
+    # Pipe in manifest JSON
+    cat manifest.json | publish-versions.py
+
+    # Optionally specify custom output directory
+    publish-versions.py --output <path>
+"""
+
+import argparse
 import json
 import re
 import subprocess
@@ -199,20 +211,26 @@ def update_versions_file(
 
 def main() -> None:
     """Main entry point."""
-    if len(sys.argv) != 2:
-        print("Usage: publish-versions.py <path-to-versions-repo>", file=sys.stderr)
-        print(
-            "       cat manifest.json | publish-versions.py <path-to-versions-repo>",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Update product version files from cargo-dist manifest"
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Output directory (default: ../v1/ relative to this script)",
+    )
+    args = parser.parse_args()
 
-    versions_repo = Path(sys.argv[1])
+    # Calculate the output directory
+    if args.output:
+        versions_repo = args.output
+    else:
+        # Default: script is in versions/scripts/, output to versions/v1/
+        script_dir = Path(__file__).parent
+        versions_repo = script_dir.parent / "v1"
 
-    # Ensure versions repo exists
-    if not versions_repo.is_dir():
-        print(f"Error: {versions_repo} is not a directory", file=sys.stderr)
-        sys.exit(1)
+    # Ensure versions directory exists
+    versions_repo.mkdir(parents=True, exist_ok=True)
 
     # Get cargo dist manifest
     if sys.stdin.isatty():

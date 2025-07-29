@@ -3,8 +3,20 @@
 # requires-python = ">=3.12"
 # dependencies = ["httpx"]
 # ///
-"""Backfill historical versions from GitHub releases to NDJSON format."""
+"""Backfill historical versions from GitHub releases to NDJSON format.
 
+Usage:
+    # Backfill versions for a project (default: writes to ../v1/)
+    backfill-versions.py <project-name>
+
+    # Specify custom GitHub org/repo
+    backfill-versions.py <project-name> --github astral-sh/uv
+
+    # Specify custom output directory
+    backfill-versions.py <project-name> --output <path>
+"""
+
+import argparse
 import json
 import os
 import re
@@ -152,27 +164,39 @@ def process_release(
 
 def main() -> None:
     """Main entry point."""
-    if len(sys.argv) not in (3, 4):
-        print(
-            "Usage: backfill-versions.py <project-name> <path-to-versions-repo> [github-org/repo]",
-            file=sys.stderr,
-        )
-        print("  project-name: 'uv' or 'ruff'", file=sys.stderr)
-        print(
-            "  github-org/repo: defaults to 'astral-sh/{project-name}'", file=sys.stderr
-        )
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Backfill historical versions from GitHub releases"
+    )
+    parser.add_argument("project_name", help="Project name (e.g., 'uv', 'ruff')")
+    parser.add_argument(
+        "--github",
+        help="GitHub org/repo (default: astral-sh/{project_name})",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Output directory (default: ../v1/ relative to this script)",
+    )
+    args = parser.parse_args()
 
-    project_name = sys.argv[1]
-    versions_repo = Path(sys.argv[2])
+    project_name = args.project_name
+
+    # Calculate the output directory
+    if args.output:
+        versions_repo = args.output
+    else:
+        # Default: script is in versions/scripts/, output to versions/v1/
+        script_dir = Path(__file__).parent
+        versions_repo = script_dir.parent / "v1"
+
+    # Ensure versions directory exists
+    versions_repo.mkdir(parents=True, exist_ok=True)
 
     # Parse GitHub org/repo
-    if len(sys.argv) == 4:
-        org_repo = sys.argv[3]
+    if args.github:
+        org_repo = args.github
         if "/" not in org_repo:
-            print(
-                "Error: github-org/repo must be in format 'org/repo'", file=sys.stderr
-            )
+            print("Error: --github must be in format 'org/repo'", file=sys.stderr)
             sys.exit(1)
         org, repo = org_repo.split("/", 1)
     else:
@@ -181,11 +205,6 @@ def main() -> None:
         repo = project_name
 
     versions_file = versions_repo / f"{project_name}.ndjson"
-
-    # Ensure versions repo exists
-    if not versions_repo.is_dir():
-        print(f"Error: {versions_repo} is not a directory", file=sys.stderr)
-        sys.exit(1)
 
     # Fetch all releases
     print(f"Fetching releases from GitHub {org}/{repo}...", file=sys.stderr)
